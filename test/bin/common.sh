@@ -65,6 +65,9 @@ export NEXT_REPO="${IMAGEDIR}/rpm-repos/microshift-fake-next-minor"
 # Location of local repository used by composer
 export BASE_REPO="${IMAGEDIR}/rpm-repos/microshift-base"
 
+# Location of RPM packages downloaded from brew
+export BREW_REPO="${IMAGEDIR}/brew"
+
 # Location of container images list for all the built images
 export CONTAINER_LIST="${IMAGEDIR}/container-images-list"
 
