@@ -52,7 +52,7 @@ download_build_cache() {
 }
 
 # Run image build for the 'base' layers and update the cache:
-# - Upload build artifacts
+# - Upload build artifacts (brew RPMs should have been downloaded by the CI job)
 # - Update 'last' to point to the current build tag
 # - Clean up older images, preserving the 'last' and the previous build tag
 # Note that the build and upload are skipped if valid cached data already exists.
