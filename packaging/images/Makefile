@@ -12,9 +12,11 @@ all:
 build:
 	for file in Containerfile.ci* ; do \
 		tag="$$(awk -F. '{print $$NF}' <<< "$${file}")" ; \
+		crt="$$(cat /etc/pki/ca-trust/source/anchors/2015-RH-IT-Root-CA.pem)" ; \
 		podman build \
 			--build-arg BASE_IMAGE_URL="${BASE_IMAGE_URL}" \
 			--build-arg BASE_IMAGE_TAG="${BASE_IMAGE_TAG}" \
+			--build-arg BREW_CERT="$${crt}" \
 			--tag "${DEST_IMAGE_REPO}":"$${tag}"-"${ARCH}" \
 			--file "$${file}"|| exit 1; \
 	done
