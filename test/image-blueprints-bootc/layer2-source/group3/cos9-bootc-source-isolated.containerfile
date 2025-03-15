@@ -23,5 +23,11 @@ RUN --mount=type=secret,id=pullsecret,dst=/run/secrets/pull-secret.json \
         done ; \
     done
 
-# Edit the container storage configuration file to include the new path
-RUN sed -i '/^additionalimagestores.*/a\   "/usr/lib/containers/storage",' /etc/containers/storage.conf
+# Install a systemd drop-in unit to address the problem with image upgrades
+# overwriting the container images in additional store. The work around is to
+# copy the images from the pre-loaded to the main container storage directory.
+# In this case, it is not necessary to update /etc/containers/storage.conf with
+# the additional store path.
+# See https://issues.redhat.com/browse/RHEL-75827
+RUN mkdir -p /etc/systemd/system/microshift.service.d
+COPY --chmod=644 ./bootc-images/microshift-copy-images.conf /etc/systemd/system/microshift.service.d/microshift-copy-images.conf

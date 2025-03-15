@@ -1,21 +1,18 @@
-FROM localhost/rhel96-bootc-source:latest
+# {{- if env.Getenv "CURRENT_RELEASE_VERSION" "" -}}
+# Note: This comment makes templating add a new line before the code
+FROM localhost/rhel96-test-agent:latest
 
-# The qemu-guest-agent is used in offline tests
-RUN dnf install -y qemu-guest-agent && \
-    systemctl enable qemu-guest-agent && \
+# Copy repository configuration
+COPY ./bootc-images/microshift-fast-datapath-rhel9.repo ./bootc-images/microshift-crel.repo ./bootc-images/microshift-rhocp-y.repo \
+    /etc/yum.repos.d/
+
+# Print repository configuration contents.
+# Install MicroShift and cleanup.
+RUN dnf repoinfo --enabled && \
+    dnf install -y firewalld "microshift-{{ .Env.CURRENT_RELEASE_VERSION }}" "microshift-release-info-{{ .Env.CURRENT_RELEASE_VERSION }}" && \
+    systemctl enable microshift && \
+    rm -vf /etc/yum.repos.d/microshift-*.repo && \
     dnf clean all
-
-# Override the default qemu-ga service configuration on the guest to allow all RPCs.
-# BLOCK_RPCS is a deny-list of qemu-guest-agent RPCs to block, such as file read/write, process execution, etc. By
-# default, all RPCs are blocked.
-# FREEZE_HOOK_PATHNAME is the dir-path containing hook scripts. This override does not change the default value.
-# These scripts are executed before or after guest image snapshot ops ("freezing" and "thawing" in libvirt speak).
-# No hooks are installed by default.
-RUN printf '\
-\# This is a systemd environment file, not a shell script.\n\
-\# It provides settings for "/lib/systemd/system/qemu-guest-agent.service".\n\
-BLOCK_RPCS=\n\
-FSFREEZE_HOOK_PATHNAME=/etc/qemu-ga/fsfreeze-hook\n' > /etc/sysconfig/qemu-ga
 
 # Embed images based on contents of release-info RPMs.
 #
@@ -45,3 +42,16 @@ RUN --mount=type=secret,id=pullsecret,dst=/run/secrets/pull-secret.json \
 # See https://issues.redhat.com/browse/RHEL-75827
 RUN mkdir -p /etc/systemd/system/microshift.service.d
 COPY --chmod=644 ./bootc-images/microshift-copy-images.conf /etc/systemd/system/microshift.service.d/microshift-copy-images.conf
+
+# Configure firewall
+RUN firewall-offline-cmd --zone=public --add-port=22/tcp && \
+    firewall-offline-cmd --zone=trusted --add-source=10.42.0.0/16 && \
+    firewall-offline-cmd --zone=trusted --add-source=169.254.169.1 && \
+    firewall-offline-cmd --zone=trusted --add-source=fd01::/48 && \
+    firewall-offline-cmd --zone=public --add-port=80/tcp && \
+    firewall-offline-cmd --zone=public --add-port=443/tcp && \
+    firewall-offline-cmd --zone=public --add-port=5353/udp && \
+    firewall-offline-cmd --zone=public --add-port=6443/tcp && \
+    firewall-offline-cmd --zone=public --add-port=30000-32767/tcp && \
+    firewall-offline-cmd --zone=public --add-port=30000-32767/udp    
+# {{- end -}}
