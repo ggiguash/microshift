@@ -268,3 +268,96 @@ get_scenario_type_from_path() {
     esac
     echo "${type}"
 }
+
+# Prepare a static delta file between two container images specified in the
+# function arguments. The images are copied from the mirror registry to a local
+# directory and compared using the 'xdelta3' command.
+#
+# The result is stored in the '${BOOTC_STATIC_DELTA}/${src}@${dst}.xdelta' file.
+#
+# Arguments:
+#   src - Source container image name
+#   dst - Destination container image name
+# Return:
+#   '${src}@${dst}.xdelta' file stored in the '${BOOTC_STATIC_DELTA}' directory
+prepare_static_delta() {
+    local -r src=$1
+    local -r dst=$2
+    local -r delta="${src}@${dst}.xdelta"
+    local -r tar_args="--sort=name --mtime=1970-01-01T00:00:00Z --owner=0 --group=0 --numeric-owner --no-acls --no-selinux --no-xattrs"
+
+    local -r workdir="$(mktemp -d /tmp/bootc-delta-prepare.XXXXXXXX)"
+    # shellcheck disable=SC2164
+    pushd "${workdir}" &>/dev/null
+
+    # Export the images to oci format and create tar files explicitly
+    for i in "${src}" "${dst}" ; do
+        # Copy to oci format first
+        skopeo copy --all --preserve-digests \
+            --authfile "${MIRROR_REGISTRY_DIR}/config/microshift_auth.json" \
+            docker://"${MIRROR_REGISTRY_URL}/${i}:latest" \
+            oci:"${i}"
+
+        # Create tar archive from oci directory
+        tar $tar_args -cf "${i}.tar" -C "${i}" .
+    done
+
+    # Create a xdelta3 file and list file sizes
+    xdelta3 encode -f -s "${src}.tar" "${dst}.tar" "${delta}"
+    ls -lh ./*.tar* ./*.xdelta
+
+    # Store the xdelta3 file in the static delta directory
+    mkdir -p "${BOOTC_STATIC_DELTA}"
+    mv -f "${delta}" "${BOOTC_STATIC_DELTA}/"
+
+    # shellcheck disable=SC2164
+    popd &>/dev/null
+    rm -rf "${workdir}"
+}
+
+# Consume a static delta file created by the 'prepare_static_delta' function.
+# The '${src}' image is copied from the mirror registry to a local directory
+# and merged with the '${BOOTC_STATIC_DELTA}/${src}@${dst}.xdelta' file.
+#
+# The result of the merge is uploaded to the mirror registry and stored under
+# the '${dst}-patched' name.
+#
+# Arguments:
+#   src - Source container image name
+#   dst - Destination container image name
+# Return:
+#   '${dst}-patched' image stored in the mirror registry
+consume_static_delta() {
+    local -r src=$1
+    local -r dst=$2
+    local -r delta="${src}@${dst}.xdelta"
+    local -r tar_args="--sort=name --mtime=1970-01-01T00:00:00Z --owner=0 --group=0 --numeric-owner --no-acls --no-selinux --no-xattrs"
+
+    local -r workdir="$(mktemp -d /tmp/bootc-delta-consume.XXXXXXXX)"
+    # shellcheck disable=SC2164
+    pushd "${workdir}" &>/dev/null
+
+    # Export the source image to oci format and create tar file explicitly
+    skopeo copy --all --preserve-digests \
+        --authfile "${MIRROR_REGISTRY_DIR}/config/microshift_auth.json" \
+        docker://"${MIRROR_REGISTRY_URL}/${src}:latest" \
+        oci:"${src}"
+
+    # Create tar archive from oci directory
+    tar $tar_args -cf "${src}.tar" -C "${src}" .
+
+    # Apply the xdelta3 patch to create the destination image
+    cp "${BOOTC_STATIC_DELTA}/${delta}" .
+    xdelta3 decode -f -s "${src}.tar" "${delta}" "${dst}-patched.tar"
+    ls -lh ./*.tar* ./*.xdelta
+
+    # Copy the patched image into the registry
+    skopeo copy --all --preserve-digests \
+        --authfile "${MIRROR_REGISTRY_DIR}/config/microshift_auth.json" \
+        oci-archive:"${dst}-patched.tar" \
+        docker://"${MIRROR_REGISTRY_URL}/${dst}-patched:latest"
+
+    # shellcheck disable=SC2164
+    popd &>/dev/null
+    rm -rf "${workdir}"
+}
