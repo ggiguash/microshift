@@ -73,7 +73,7 @@ test-build-registry-clean:
 	rm -rf "$(REPO)/_output/test-images/mirror-registry"
 	./bin/manage_webserver.sh start
 
-PHONY: test-build-ostree-presubmit
+.PHONY: test-build-ostree-presubmit
 test-build-ostree-presubmit:
 	./bin/build_images.sh -l $(call find_layer,image-blueprints,base) $(ARGS)
 	./bin/build_images.sh -l $(call find_layer,image-blueprints,presubmit) $(ARGS)
