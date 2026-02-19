@@ -78,7 +78,7 @@ func (m *ServiceManager) Run(ctx context.Context, ready chan<- struct{}, stopped
 
 	for _, service := range services {
 		// Compile a list of ready channels of the service's dependencies (if any).
-		depsReadyList := []<-chan struct{}{}
+		depsReadyList := make([]<-chan struct{}, 0, len(service.Dependencies()))
 		for _, dependency := range service.Dependencies() {
 			depsReadyList = append(depsReadyList, readyMap[dependency])
 		}

@@ -406,7 +406,7 @@ Setup DNS For Test
     Add Entry To Hosts    ${ip_address}    ${dns_name}    /etc/hosts
     Drop In MicroShift Config    ${HOSTSFILE_ENABLED}    20-dns
     Restart MicroShift
-    Restart Greenboot And Wait For Success
+    Wait For MicroShift Healthcheck Success
 
 Cleanup DNS For Test
     [Documentation]    Cleanup DNS configuration

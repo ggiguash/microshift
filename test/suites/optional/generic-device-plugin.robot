@@ -250,5 +250,5 @@ Teardown Suite With GDP Cleanup
     Remove Drop In MicroShift Config    10-gdp
     # Restart MicroShift to clean state for next suite
     Restart MicroShift
-    Restart Greenboot And Wait For Success
+    Wait For MicroShift Healthcheck Success
     Teardown Suite With Namespace

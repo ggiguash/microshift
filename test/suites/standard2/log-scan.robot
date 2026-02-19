@@ -43,7 +43,7 @@ Setup
 Teardown
     [Documentation]    Test suite teardown
     Restart MicroShift
-    Restart Greenboot And Wait For Success
+    Wait For MicroShift Healthcheck Success
 
     Logout MicroShift Host
     Remove Kubeconfig
@@ -54,7 +54,7 @@ Start Stop And Check Logs
     Start MicroShift
     Setup Kubeconfig
 
-    Restart Greenboot And Wait For Success
+    Wait For MicroShift Healthcheck Success
     Stop MicroShift
 
     # Note: The 'forbidden' messages appear on clean startup
