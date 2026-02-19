@@ -14,3 +14,11 @@ enabled = 1
 sslverify = false
 gpgcheck = 0
 skip_if_unavailable = false
+
+[rhel-9.8-early-kernel]
+name = rhel-9.8-early-kernel
+baseurl = http://localhost:{{ .Env.WEB_SERVER_PORT }}/ocp-mirror/reposync/4.22{{ if eq .Env.UNAME_M "aarch64" }}_aarch64{{ end }}/rhel-98-early-kernel
+enabled = 1
+sslverify = false
+gpgcheck = 0
+skip_if_unavailable = false
