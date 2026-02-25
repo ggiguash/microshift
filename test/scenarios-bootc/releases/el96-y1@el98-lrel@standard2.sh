@@ -7,7 +7,7 @@
 export TEST_RANDOMIZATION=none
 
 start_image="rhel96-bootc-brew-y1-with-optional"
-dest_image="rhel96-bootc-brew-lrel-optional"
+dest_image="rhel98-bootc-brew-lrel-optional"
 
 scenario_create_vms() {
     exit_if_image_not_found "${start_image}"
@@ -32,5 +32,5 @@ scenario_run_tests() {
         --variable "TARGET_REF:${dest_image}" \
         --variable "BOOTC_REGISTRY:${MIRROR_REGISTRY_URL}" \
         suites/upgrade/upgrade-successful.robot \
-        suites/standard2
+        suites/standard2/
 }
