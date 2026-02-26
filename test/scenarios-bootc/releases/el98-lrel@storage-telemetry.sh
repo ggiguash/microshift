@@ -24,6 +24,6 @@ scenario_run_tests() {
         --variable "PROXY_HOST:${VM_BRIDGE_IP}" \
         --variable "PROXY_PORT:9001" \
         --variable "PROMETHEUS_HOST:$(hostname)" \
-        suites/storage/storage.robot \
+        suites/storage/ \
         suites/telemetry/telemetry.robot
 }

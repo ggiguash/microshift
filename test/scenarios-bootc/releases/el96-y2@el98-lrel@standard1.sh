@@ -8,6 +8,7 @@ export TEST_RANDOMIZATION=none
 
 start_image="rhel96-bootc-brew-y2-with-optional"
 dest_image="rhel98-bootc-brew-lrel-optional"
+
 scenario_create_vms() {
     exit_if_image_not_found "${start_image}"
     exit_if_image_not_found "${dest_image}"

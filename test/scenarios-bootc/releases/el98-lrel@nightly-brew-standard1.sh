@@ -2,7 +2,7 @@
 
 # Sourced from scenario.sh and uses functions defined there.
 
-start_image=rhel98-bootc-brew-nightly-with-optional
+start_image="rhel98-bootc-brew-nightly-with-optional"
 
 scenario_create_vms() {
     exit_if_image_not_found "${start_image}"
