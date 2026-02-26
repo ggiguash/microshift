@@ -1,15 +1,15 @@
-name = "rhel-9.6-microshift-source-optionals"
-description = "A RHEL 9.6 image with MicroShift and OLM built from source."
+name = "rhel-9.8-microshift-source"
+description = "A RHEL 9.8 image with the RPMs built from source."
 version = "0.0.1"
 modules = []
 groups = []
-distro = "rhel-96"
+distro = "rhel-98"
 
 # Parent specification directive recognized by test/bin/build_images.sh to be
 # used with the '--parent' argument of 'osbuild-composer'
 {{- "\n" -}}
 {{- if env.Getenv "CURRENT_RELEASE_VERSION" "" -}}
-# parent = "rhel-9.6-microshift-crel-optionals"
+# parent = "rhel-9.8-microshift-crel"
 {{- else -}}
 # parent = "rhel-9.6-microshift-4.{{ .Env.PREVIOUS_MINOR_VERSION }}"
 {{- end -}}
@@ -20,20 +20,6 @@ distro = "rhel-96"
 name = "{{ . }}"
 version = "{{ env.Getenv "SOURCE_VERSION" }}"
 {{ end }}
-
-{{ range (env.Getenv "MICROSHIFT_OPTIONAL_RPMS" | strings.Split " ") }}
-[[packages]]
-name = "{{ . }}"
-version = "{{ env.Getenv "SOURCE_VERSION" }}"
-{{ end }}
-
-{{- if and (env.Getenv "UNAME_M" "") (eq "x86_64" .Env.UNAME_M) }}
-{{ range (env.Getenv "MICROSHIFT_X86_64_RPMS" | strings.Split " ") }}
-[[packages]]
-name = "{{ . }}"
-version = "{{ env.Getenv "SOURCE_VERSION" }}"
-{{ end }}
-{{- end }}
 
 [[packages]]
 name = "microshift-test-agent"
