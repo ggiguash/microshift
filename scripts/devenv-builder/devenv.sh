@@ -26,7 +26,7 @@ function resolve_names() {
     RHEL_VERSION=$(jq -r --arg b "${DEVENV_BRANCH}" '.[$b] // empty' "${SCRIPTDIR}/rhel-versions.json")
     IMAGE_NAME="microshift-vm:${BRANCH_TAG}"
     VM_NAME="microshift-devenv-${BRANCH_TAG}"
-    VM_DIR="${ROOTDIR}/_output/${VM_NAME}"
+    VM_DIR="${ROOTDIR}/_output/devenv-vm/${BRANCH_TAG}"
 }
 
 function usage() {
@@ -45,7 +45,7 @@ function usage() {
     echo "  PULL_SECRET          Path to pull secret (default: ~/.pull-secret.json)"
     echo "  RHSM_ORG             Red Hat subscription org ID (required for 'setup' and 'start')"
     echo "  RHSM_ACTIVATION_KEY  Red Hat subscription activation key (required for 'setup' and 'start')"
-    echo "  DEVENV_BRANCH        Build for a different branch (creates a worktree)"
+    echo "  DEVENV_BRANCH        Build for a different branch"
     echo "  VM_CPUS              Number of CPUs (default: 4)"
     echo "  VM_MEMORY            Memory in MiB (default: 8192)"
     echo ""
@@ -184,14 +184,15 @@ function cmd_setup() {
         chmod 600 "${VM_DIR}/builder_password"
     fi
 
-    # Create worktree for the build so configure scripts come from the target branch
-    local worktree_base="${ROOTDIR}/.worktrees"
-    local build_dir="${worktree_base}/${VM_NAME}"
-    if [ ! -d "${build_dir}" ]; then
-        echo "Creating worktree for branch '${DEVENV_BRANCH}'..."
-        mkdir -p "${worktree_base}"
-        git -C "${ROOTDIR}" worktree add --detach "${build_dir}" "${DEVENV_BRANCH}"
-    fi
+    # Export the target branch's source tree to a temporary directory.
+    # Only scripts/devenv-builder/configure-vm.sh and configure-composer.sh
+    # run during the image build, but they reference files across the repo
+    # via relative paths, so the full tree is needed as the build context.
+    local build_dir
+    build_dir=$(mktemp -d)
+
+    echo "Exporting source tree for branch '${DEVENV_BRANCH}'..."
+    git -C "${ROOTDIR}" archive "${DEVENV_BRANCH}" | tar -x -C "${build_dir}"
 
     # Build the bootc container image
     local rhsm_org_file rhsm_key_file
@@ -199,7 +200,7 @@ function cmd_setup() {
     rhsm_key_file=$(mktemp)
     echo -n "${RHSM_ORG}" > "${rhsm_org_file}"
     echo -n "${RHSM_ACTIVATION_KEY}" > "${rhsm_key_file}"
-    trap "rm -f '${rhsm_org_file}' '${rhsm_key_file}'" EXIT
+    trap "rm -rf '${build_dir}' '${rhsm_org_file}' '${rhsm_key_file}'" EXIT
 
     local -a build_args=(
         --authfile "${PULL_SECRET}"

@@ -1,7 +1,7 @@
 # MicroShift Development Environment
 
-Build and test MicroShift (RPMs, bootc images, ISOs, VMs) inside a libvirt VM
-with NFS-shared sources from any Linux host with KVM.
+Build and test MicroShift (RPMs, bootc images, ostree images, ISOs) inside a
+libvirt VM with NFS-shared sources from any Linux host with KVM.
 
 ## Prerequisites
 
@@ -70,8 +70,9 @@ so multiple releases can run side by side.
 
 ### Setup (image build)
 
-1. Creates a git worktree at `.worktrees/microshift-devenv-<branch>` so that
-   `configure-vm.sh` and `configure-composer.sh` come from the target branch.
+1. Exports the target branch's source tree to a temporary directory using
+   `git archive` so that `configure-vm.sh` and `configure-composer.sh` come
+   from the correct branch. The temporary directory is removed after the build.
 2. Builds a RHEL bootc container image (`Containerfile.vm`) that:
    - Creates a `builder` user with SSH key and console password
    - Registers RHSM, runs `configure-vm.sh --no-build` and
@@ -80,7 +81,7 @@ so multiple releases can run side by side.
    - Redirects `/tmp` to `/var/tmp` (composefs root is read-only)
 3. Converts the bootc image to a qcow2 disk using `image-builder-cli` with a
    blueprint that disables zram (`systemd.zram=0`).
-4. Stores the base image at `_output/microshift-devenv-<branch>/base.qcow2`.
+4. Stores the base image at `_output/devenv-vm/<branch>/base.qcow2`.
 
 ### Start (VM creation)
 
@@ -101,6 +102,32 @@ so multiple releases can run side by side.
 - `delete` removes the VM definition but preserves the base disk image. Use
   `delete` + `start` for a clean VM from the same base.
 
+The VM does not contain any critical data — all source code lives on the host
+and is shared via NFS. The VM can be torn down and rebuilt at any time without
+losing work.
+
+## Source Tree Layout
+
+The VM uses two separate source paths for different purposes:
+
+**Build-time export (setup only):** During `setup`, `git archive` exports the
+target branch's full source tree to a temporary directory. This export is used
+exclusively as the build context for `podman build`, so that `configure-vm.sh`
+and `configure-composer.sh` come from the correct branch and install the right
+set of dependencies for that release. The temporary directory is removed after
+the image is built.
+
+**NFS-shared project root (runtime):** During `start`, the entire repository
+root (the directory containing `.git`, `scripts/`, `pkg/`, etc.) is exported
+via NFS and mounted at `/var/microshift` inside the VM. This is the main
+checkout on the host. Edits made on the host are immediately visible inside the
+VM, and vice versa. The VM works on whatever branch is currently checked out on
+the host.
+
+This separation means `setup` builds an image with the right dependencies for a
+given release, while the NFS mount at runtime gives the VM live access to the
+working tree for day-to-day development.
+
 ## Editing Code
 
 The NFS mount provides bidirectional, real-time file sharing. Edit on the host
@@ -117,7 +144,7 @@ vim pkg/config/config.go
 ## Debugging
 
 - **Console access:** `sudo virsh console microshift-devenv-<branch>` with the
-  password stored in `_output/microshift-devenv-<branch>/builder_password`.
+  password stored in `_output/devenv-vm/<branch>/builder_password`.
 - **virt-manager:** The VM is a standard libvirt domain, visible in
   `virt-manager` for graphical console and resource monitoring.
-- **SSH key:** Stored at `_output/microshift-devenv-<branch>/ssh_key`.
+- **SSH key:** Stored at `_output/devenv-vm/<branch>/ssh_key`.
